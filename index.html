@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Knowledge Graph Explorer</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header class="site-header">
+  <div class="header-left">
+    <div class="logo-mark">KG</div>
+    <div>
+      <h1 class="site-title">Knowledge Graph Explorer</h1>
+      <p class="site-subtitle">Directed Graph Visualisation &amp; Pathfinding</p>
+    </div>
+  </div>
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="explorer">Explorer</button>
+    <button class="tab-btn" data-tab="concepts">Concepts</button>
+    <button class="tab-btn" data-tab="quiz">Quiz</button>
+    <button class="tab-btn" data-tab="applications">Applications</button>
+  </nav>
+</header>
+
+<!-- ═══════════════════ EXPLORER TAB ═══════════════════ -->
+<div id="tab-explorer" class="tab-panel active">
+  <div class="workspace">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar">
+      <section class="panel">
+        <h2 class="panel-title">Add Node</h2>
+        <div class="form-group">
+          <label>Concept Name</label>
+          <input id="nodeLabel" type="text" placeholder="e.g. Machine Learning" />
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="nodeCategory">
+            <option value="core">Core Concept</option>
+            <option value="method">Method / Algorithm</option>
+            <option value="application">Application</option>
+            <option value="tool">Tool / Framework</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="addNode()">+ Add Node</button>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Add Relationship</h2>
+        <div class="form-group">
+          <label>From Node</label>
+          <select id="edgeFrom"><option value="">— select —</option></select>
+        </div>
+        <div class="form-group">
+          <label>To Node</label>
+          <select id="edgeTo"><option value="">— select —</option></select>
+        </div>
+        <div class="form-group">
+          <label>Relation Type</label>
+          <select id="edgeType">
+            <option value="is_a">is a</option>
+            <option value="includes">includes</option>
+            <option value="uses">uses</option>
+            <option value="leads_to">leads to</option>
+            <option value="part_of">part of</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Weight <span class="hint">(1–10)</span></label>
+          <input id="edgeWeight" type="number" min="1" max="10" value="1" />
+        </div>
+        <button class="btn btn-primary" onclick="addEdge()">+ Add Edge</button>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Shortest Path</h2>
+        <div class="form-group">
+          <label>From</label>
+          <select id="pathFrom"><option value="">— select —</option></select>
+        </div>
+        <div class="form-group">
+          <label>To</label>
+          <select id="pathTo"><option value="">— select —</option></select>
+        </div>
+        <button class="btn btn-accent" onclick="findShortestPath()">Run Dijkstra</button>
+        <div id="pathResult" class="path-result hidden"></div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Legend</h2>
+        <div class="legend">
+          <div class="legend-item"><span class="swatch edge-is_a"></span> is a</div>
+          <div class="legend-item"><span class="swatch edge-includes"></span> includes</div>
+          <div class="legend-item"><span class="swatch edge-uses"></span> uses</div>
+          <div class="legend-item"><span class="swatch edge-leads_to"></span> leads to</div>
+          <div class="legend-item"><span class="swatch edge-part_of"></span> part of</div>
+        </div>
+        <hr class="divider"/>
+        <div class="legend">
+          <div class="legend-item"><span class="swatch cat-core"></span> Core</div>
+          <div class="legend-item"><span class="swatch cat-method"></span> Method</div>
+          <div class="legend-item"><span class="swatch cat-application"></span> Application</div>
+          <div class="legend-item"><span class="swatch cat-tool"></span> Tool</div>
+        </div>
+      </section>
+
+      <!-- ═══ GRAPH MODES (replaces old Actions panel) ═══ -->
+      <section class="panel">
+        <h2 class="panel-title">Graph Modes</h2>
+        <button class="btn btn-ghost" onclick="loadSampleData()">Load Default Graph</button>
+        <button class="btn btn-ghost btn-scratch" onclick="buildFromScratch()">Build Graph From Scratch</button>
+        <button class="btn btn-ghost" onclick="exportJSON()">Export JSON</button>
+      </section>
+    </aside>
+
+    <!-- GRAPH CANVAS -->
+    <main class="graph-area">
+      <div class="graph-toolbar">
+        <span class="toolbar-hint">🖱 Drag nodes · Scroll to zoom · Click node to highlight</span>
+        <div class="graph-stats" id="graphStats">Nodes: 0 · Edges: 0</div>
+      </div>
+      <svg id="graphSvg"></svg>
+      <div id="tooltip" class="tooltip hidden"></div>
+
+      <!-- Node detail card -->
+      <div id="nodeDetail" class="node-detail hidden">
+        <button class="close-btn" onclick="closeNodeDetail()">✕</button>
+        <h3 id="detailName"></h3>
+        <div id="detailCategory" class="detail-badge"></div>
+        <div class="detail-section">
+          <p class="detail-label">Outgoing relations</p>
+          <ul id="detailOut"></ul>
+        </div>
+        <div class="detail-section">
+          <p class="detail-label">Incoming relations</p>
+          <ul id="detailIn"></ul>
+        </div>
+        <button class="btn btn-danger" id="detailDeleteBtn">Delete Node</button>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<!-- ═══════════════════ CONCEPTS TAB ═══════════════════ -->
+<div id="tab-concepts" class="tab-panel">
+  <div class="content-page">
+    <h2 class="page-title">Graph Theory Concepts</h2>
+
+    <div class="concept-grid">
+      <article class="concept-card">
+        <div class="concept-icon">⟶</div>
+        <h3>Directed Graph (Digraph)</h3>
+        <p>A directed graph G = (V, E) consists of a set of <strong>vertices V</strong> and a set of ordered pairs called <strong>directed edges E</strong>. Each edge (u, v) points <em>from</em> u <em>to</em> v and not necessarily the reverse — unlike undirected graphs where edges are bidirectional.</p>
+        <div class="code-block">G = ({A,B,C}, {(A→B),(B→C),(A→C)})</div>
+      </article>
+
+      <article class="concept-card">
+        <div class="concept-icon">⚖</div>
+        <h3>Weighted Edges</h3>
+        <p>A weighted graph assigns a numeric <strong>cost or weight</strong> w(u,v) to each edge. Weights can represent distance, time, similarity, or strength of a relationship. In knowledge graphs, a higher weight often means a stronger conceptual link.</p>
+        <div class="code-block">w(AI → ML) = 1  (direct parent)<br/>w(AI → DL) = 3  (indirect path)</div>
+      </article>
+
+      <article class="concept-card">
+        <div class="concept-icon">🔍</div>
+        <h3>Graph Traversal — BFS &amp; DFS</h3>
+        <p><strong>BFS</strong> (Breadth-First Search) explores all neighbours at distance 1, then 2, etc., making it ideal for finding the shortest unweighted path. <strong>DFS</strong> dives deep along one branch before backtracking, suitable for cycle detection and topological sort.</p>
+        <div class="code-block">BFS queue: [A] → [B,C] → [D,E]<br/>DFS stack: A → B → D → backtrack</div>
+      </article>
+
+      <article class="concept-card">
+        <div class="concept-icon">📐</div>
+        <h3>Dijkstra's Algorithm</h3>
+        <p>Finds the <strong>minimum-weight path</strong> between a source and all other nodes. It uses a <em>priority queue</em>: always relax the node with the smallest tentative distance. Time complexity: <strong>O((V + E) log V)</strong> with a binary heap.</p>
+        <div class="code-block">dist[src]=0; dist[others]=∞<br/>while queue: relax neighbours</div>
+      </article>
+
+      <article class="concept-card">
+        <div class="concept-icon">🔗</div>
+        <h3>In-degree &amp; Out-degree</h3>
+        <p>The <strong>in-degree</strong> of a node is the number of edges pointing <em>into</em> it; the <strong>out-degree</strong> is the number pointing <em>out</em>. Nodes with high in-degree (hubs) are conceptually important — they are depended upon by many others.</p>
+        <div class="code-block">in-deg(ML) = 1  (from AI)<br/>out-deg(ML) = 2  (to DL, NLP)</div>
+      </article>
+
+      <article class="concept-card">
+        <div class="concept-icon">🔄</div>
+        <h3>Cycles &amp; DAGs</h3>
+        <p>A <strong>cycle</strong> exists when you can follow directed edges and return to the starting node. A graph with no cycles is called a <strong>DAG</strong> (Directed Acyclic Graph). Knowledge graphs are often DAGs — concepts build on each other without circular dependency.</p>
+        <div class="code-block">Cycle: A→B→C→A<br/>DAG:  A→B→C (no return path)</div>
+      </article>
+    </div>
+
+    <section class="algo-walkthrough">
+      <h3>Dijkstra's Step-by-Step Walkthrough</h3>
+      <ol class="steps">
+        <li><strong>Initialise</strong> — set dist[source] = 0, all others = ∞. Insert all nodes into a min-priority queue keyed by distance.</li>
+        <li><strong>Extract minimum</strong> — pop the node u with the smallest distance.</li>
+        <li><strong>Relax neighbours</strong> — for each neighbour v of u, if dist[u] + w(u,v) &lt; dist[v], update dist[v] and record predecessor[v] = u.</li>
+        <li><strong>Repeat</strong> until the queue is empty or the destination is popped.</li>
+        <li><strong>Reconstruct path</strong> — follow predecessor[] backwards from destination to source.</li>
+      </ol>
+    </section>
+  </div>
+</div>
+
+<!-- ═══════════════════ QUIZ TAB ═══════════════════ -->
+<div id="tab-quiz" class="tab-panel">
+  <div class="content-page">
+    <h2 class="page-title">Relationship Quiz</h2>
+    <p class="page-sub">Test your knowledge of the graph you built. Answer based on the edges currently in the Explorer.</p>
+
+    <div class="quiz-container">
+      <div id="quizCard" class="quiz-card">
+        <p id="quizPrompt" class="quiz-prompt">Press "Start Quiz" to begin.</p>
+        <div id="quizOptions" class="quiz-options"></div>
+        <div id="quizFeedback" class="quiz-feedback hidden"></div>
+      </div>
+      <div class="quiz-controls">
+        <button class="btn btn-primary" onclick="startQuiz()">Start Quiz</button>
+        <button class="btn btn-ghost" onclick="nextQuestion()">Next Question</button>
+      </div>
+      <div class="quiz-score">
+        Score: <span id="quizScore">0</span> / <span id="quizTotal">0</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ APPLICATIONS TAB ═══════════════════ -->
+<div id="tab-applications" class="tab-panel">
+  <div class="content-page">
+    <h2 class="page-title">Real-World Applications</h2>
+
+    <div class="app-grid">
+      <article class="app-card">
+        <div class="app-icon">🧠</div>
+        <h3>Google Knowledge Graph</h3>
+        <p>Powers the info panels on the right side of Google Search. When you search "Einstein", the knowledge graph surfaces his birth date, works, and relationships without you having to visit a page.</p>
+        <span class="app-tag">Search &amp; Discovery</span>
+      </article>
+
+      <article class="app-card">
+        <div class="app-icon">💊</div>
+        <h3>Drug Interaction Networks</h3>
+        <p>Pharmaceutical companies model drugs, diseases, proteins, and genes as nodes. Edges encode interactions, enabling AI to predict adverse effects or repurpose existing drugs for new diseases.</p>
+        <span class="app-tag">Healthcare</span>
+      </article>
+
+      <article class="app-card">
+        <div class="app-icon">🛒</div>
+        <h3>Recommendation Systems</h3>
+        <p>Amazon and Netflix use graph-based collaborative filtering: users, products, and genres are nodes; purchases or views are weighted edges. Shortest-path similarity drives "customers also bought" suggestions.</p>
+        <span class="app-tag">E-commerce / Media</span>
+      </article>
+
+      <article class="app-card">
+        <div class="app-icon">🔐</div>
+        <h3>Fraud Detection</h3>
+        <p>Banks map accounts, transactions, and devices as nodes. Unusual clusters or short cycles (A→B→C→A in money flows) signal laundering rings, enabling real-time fraud alerts.</p>
+        <span class="app-tag">Finance</span>
+      </article>
+
+      <article class="app-card">
+        <div class="app-icon">🗺</div>
+        <h3>Navigation &amp; Route Planning</h3>
+        <p>Google Maps is a giant weighted directed graph. Dijkstra (and its variants A* and Bidirectional Dijkstra) compute the fastest route by minimising total edge weight (time or distance).</p>
+        <span class="app-tag">Logistics</span>
+      </article>
+
+      <article class="app-card">
+        <div class="app-icon">📚</div>
+        <h3>Curriculum Design</h3>
+        <p>MOOCs like Coursera model prerequisite chains as DAGs. A topological sort of the graph gives the optimal learning order — just like the AI → ML → DL sample in this app.</p>
+        <span class="app-tag">Education</span>
+      </article>
+    </div>
+
+    <section class="how-it-works">
+      <h3>How This App Works — Code Architecture</h3>
+      <div class="steps-horizontal">
+        <div class="step-box">
+          <div class="step-num">01</div>
+          <h4>Data Model</h4>
+          <p>Two arrays — <code>nodes[]</code> and <code>edges[]</code> — are the source of truth. Each node carries an id, label, and category. Each edge carries source, target, type, and weight.</p>
+        </div>
+        <div class="step-box">
+          <div class="step-num">02</div>
+          <h4>D3 Force Layout</h4>
+          <p>D3's <code>forceSimulation</code> runs a physics engine: charge repulsion keeps nodes apart, link forces pull connected nodes together, and centering keeps the graph visible.</p>
+        </div>
+        <div class="step-box">
+          <div class="step-num">03</div>
+          <h4>SVG Rendering</h4>
+          <p>Nodes are <code>&lt;circle&gt;</code> elements; edges are <code>&lt;line&gt;</code> elements with <code>&lt;marker&gt;</code> arrowheads. A <code>&lt;g&gt;</code> zoom/pan container wraps everything.</p>
+        </div>
+        <div class="step-box">
+          <div class="step-num">04</div>
+          <h4>Dijkstra</h4>
+          <p>Implemented from scratch with a simple priority queue. The adjacency list is built fresh on each run from the <code>edges[]</code> array, so it always reflects the current graph state.</p>
+        </div>
+        <div class="step-box">
+          <div class="step-num">05</div>
+          <h4>Quiz Engine</h4>
+          <p>A question is generated by picking a random edge and asking what relation connects the two nodes. Three distractors are sampled from other edge types to form the MCQ.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="run-instructions">
+      <h3>How to Run the Project</h3>
+      <ol class="steps">
+        <li>Download all three files — <code>index.html</code>, <code>style.css</code>, <code>script.js</code> — into the same folder.</li>
+        <li>Open <code>index.html</code> in any modern browser (Chrome, Firefox, Edge, Safari). <strong>No server needed</strong> — D3.js loads from a CDN.</li>
+        <li>Click <strong>"Load Default Graph"</strong> in the sidebar to instantly populate the AI → ML → DL graph.</li>
+        <li>Drag nodes, scroll to zoom, click a node to see its connections, or run Dijkstra between any two nodes.</li>
+        <li>Switch to the <strong>Quiz</strong> tab to test your knowledge of the loaded graph.</li>
+      </ol>
+    </section>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

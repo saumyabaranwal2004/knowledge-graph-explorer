@@ -1,0 +1,150 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "label": "Artificial Intelligence",
+      "category": "core"
+    },
+    {
+      "id": 2,
+      "label": "Machine Learning",
+      "category": "core"
+    },
+    {
+      "id": 3,
+      "label": "Deep Learning",
+      "category": "method"
+    },
+    {
+      "id": 4,
+      "label": "Neural Networks",
+      "category": "method"
+    },
+    {
+      "id": 5,
+      "label": "NLP",
+      "category": "application"
+    },
+    {
+      "id": 6,
+      "label": "Computer Vision",
+      "category": "application"
+    },
+    {
+      "id": 7,
+      "label": "Reinforcement Learning",
+      "category": "method"
+    },
+    {
+      "id": 8,
+      "label": "TensorFlow",
+      "category": "tool"
+    },
+    {
+      "id": 9,
+      "label": "PyTorch",
+      "category": "tool"
+    },
+    {
+      "id": 10,
+      "label": "Supervised Learning",
+      "category": "method"
+    },
+    {
+      "id": 11,
+      "label": "Unsupervised Learning",
+      "category": "method"
+    },
+    {
+      "id": 12,
+      "label": "Data Science",
+      "category": "core"
+    }
+  ],
+  "edges": [
+    {
+      "id": 1,
+      "source": 1,
+      "target": 2,
+      "type": "includes",
+      "weight": 1
+    },
+    {
+      "id": 2,
+      "source": 2,
+      "target": 3,
+      "type": "includes",
+      "weight": 1
+    },
+    {
+      "id": 3,
+      "source": 3,
+      "target": 4,
+      "type": "uses",
+      "weight": 1
+    },
+    {
+      "id": 4,
+      "source": 2,
+      "target": 10,
+      "type": "includes",
+      "weight": 2
+    },
+    {
+      "id": 5,
+      "source": 2,
+      "target": 11,
+      "type": "includes",
+      "weight": 2
+    },
+    {
+      "id": 6,
+      "source": 2,
+      "target": 7,
+      "type": "includes",
+      "weight": 3
+    },
+    {
+      "id": 7,
+      "source": 3,
+      "target": 5,
+      "type": "leads_to",
+      "weight": 2
+    },
+    {
+      "id": 8,
+      "source": 3,
+      "target": 6,
+      "type": "leads_to",
+      "weight": 2
+    },
+    {
+      "id": 9,
+      "source": 4,
+      "target": 8,
+      "type": "uses",
+      "weight": 1
+    },
+    {
+      "id": 10,
+      "source": 4,
+      "target": 9,
+      "type": "uses",
+      "weight": 1
+    },
+    {
+      "id": 11,
+      "source": 1,
+      "target": 12,
+      "type": "is_a",
+      "weight": 2
+    },
+    {
+      "id": 12,
+      "source": 12,
+      "target": 2,
+      "type": "includes",
+      "weight": 1
+    }
+  ]
+}
